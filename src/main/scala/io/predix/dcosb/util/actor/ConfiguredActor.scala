@@ -3,7 +3,7 @@ package io.predix.dcosb.util.actor
 import akka.actor.{Actor, ActorLogging, Stash}
 import akka.event.LoggingReceive
 
-import scala.concurrent.Future
+import scala.concurrent.{Future, Promise}
 import scala.reflect.ClassTag
 
 object ConfiguredActor {
@@ -41,10 +41,17 @@ abstract class ConfiguredActor[C]()(implicit ctag: ClassTag[C]) extends Actor wi
   def configured[R](f: ((C) => R)): R = {
     configuration match {
       case Some(c: C) => f(c)
-      case None => throw new IllegalStateException(s"No configuration was found")
+      case None => throw new IllegalStateException("No configuration was found")
     }
   }
 
-  override def receive = unconfiguredBehavior
+  def configuredOrFailPromise(f: ((C) => _), promise: Promise[_]):Unit = {
+    configuration match {
+      case Some(c: C) => f(c)
+      case None => promise.failure(new IllegalStateException("No configuration was found"))
+    }
+  }
+
+  override def receive: Actor.Receive = unconfiguredBehavior
 
 }

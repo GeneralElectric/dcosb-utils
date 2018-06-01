@@ -1,6 +1,7 @@
 package io.predix.dcosb.util
 
-import java.io.{File, InputStream}
+import java.io.{File, FileInputStream, InputStream}
+import java.nio.file.{Files, Paths}
 
 import scala.util.{Failure, Success, Try}
 
@@ -12,12 +13,11 @@ object FileUtils {
 
     val f = new File(path)
     if (f.exists && f.canRead) {
-      val source = scala.io.Source.fromFile(path).bufferedReader()
-      try Success(Stream.continually(source.read).takeWhile(-1 !=).map(_.toByte).toArray)
-        catch {
-          case e: Throwable => Failure(e)
-        }
-      finally source.close()
+      try {
+        Success(Files.readAllBytes(f.toPath))
+      } catch {
+        case e: Throwable => Failure(e)
+      }
     } else {
       // see if this is on the classpath
       Option[InputStream](getClass().getClassLoader().getResourceAsStream(path)) match {
@@ -25,6 +25,18 @@ object FileUtils {
         case Some(i) => Success(readToByteArray(i))
         case _       => Failure(new IllegalArgumentException(s"Could not open and read $path"))
       }
+    }
+
+  }
+
+  def fileInputStream(path: String): Option[InputStream] = {
+
+    val f = new File(path)
+    if (f.exists && f.canRead) {
+      Some(new FileInputStream(f))
+    } else {
+      // see if this is on the classpath
+      Option[InputStream](getClass().getClassLoader().getResourceAsStream(path))
     }
 
   }
